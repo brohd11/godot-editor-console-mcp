@@ -1,0 +1,5 @@
+/build/
+/bin/
+*.exe
+.DS_Store
+/editor-console-mcp
