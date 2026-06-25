@@ -16,7 +16,7 @@ type runInput struct {
 func serve(ctx context.Context, addr, token string) error {
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "godot-editor-console",
-		Version: "0.1.0",
+		Version: version,
 	}, nil)
 
 	mcp.AddTool(server, &mcp.Tool{

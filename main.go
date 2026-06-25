@@ -7,6 +7,9 @@ import (
 	"os"
 )
 
+// version is set at build time via -ldflags "-X main.version=...". See the Makefile.
+var version = "dev"
+
 func defaultAddr() string {
 	port := os.Getenv("EDITOR_CONSOLE_PORT")
 	if port == "" {
@@ -16,6 +19,11 @@ func defaultAddr() string {
 }
 
 func main() {
+	if len(os.Args) > 1 && (os.Args[1] == "version" || os.Args[1] == "--version" || os.Args[1] == "-v") {
+		fmt.Println(version)
+		return
+	}
+
 	addr := defaultAddr()
 	token := os.Getenv("EDITOR_CONSOLE_TOKEN")
 
