@@ -18,14 +18,37 @@ Claude Code ──stdio MCP──▶ godot-editor-console-mcp ──TCP 127.0.0.
    `127.0.0.1:<port>` and runs each request through `EditorConsoleSingleton.run_command_capture`.
 2. This binary connects to that port — either as an MCP server (default) or a one-shot CLI.
 
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/brohd11/Godot-Editor-Console-MCP/main/install.sh | sh
+```
+
+Installs to `~/.local/bin` and prints the `claude mcp add` line to run. Prefer to read
+before you pipe to a shell? Same thing in two steps:
+
+```bash
+curl -fsSL -o install.sh https://raw.githubusercontent.com/brohd11/Godot-Editor-Console-MCP/main/install.sh
+less install.sh && sh install.sh
+```
+
+Overrides: `BIN_DIR=/usr/local/bin` to install elsewhere, `VERSION=v0.1.0-beta` to pin a release.
+
+Covers macOS (arm64/amd64) and Linux (amd64/arm64). On **Windows**, grab the `.zip` from the
+[Releases](https://github.com/brohd11/Godot-Editor-Console-MCP/releases) page and unzip it.
+
 ## Build
 
 ```bash
 make            # host build      -> build/<os>-<arch>/godot-editor-console-mcp
-make all        # release targets -> build/{darwin-arm64,linux-amd64,windows-amd64}/
-make package    # build all, then zip each -> build/<binary>-<version>-<os>-<arch>.zip
+make all        # release targets -> build/{darwin,linux}-{amd64,arm64}/, windows-amd64/
+make package    # build all, then archive each -> build/<binary>-<os>-<arch>.{tar.gz,zip}
 make clean      # remove build/
 ```
+
+Archive names are version-less on purpose, so `install.sh` can use GitHub's
+`/releases/latest/download/<name>` redirect without an API call. Upload the
+`build/` archives to the release as-is.
 
 Builds are static (`CGO_ENABLED=0`) and stripped. The Windows target is `godot-editor-console-mcp.exe`.
 The version is stamped in from the git tag (`git describe`); `godot-editor-console-mcp version`
@@ -44,23 +67,30 @@ You can also add this to your startup commands in the Editor Console, see below.
 **Register MCP server** (Claude Code):
 
 ```bash
-claude mcp add godot-editor-console -- /abs/path/to/build/godot-editor-console-mcp
+claude mcp add -s user godot-editor-console -- ~/.local/bin/godot-editor-console-mcp
 ```
 
-Grab the zip for your OS/arch from the **Releases** page, unzip it (you get a single
-`godot-editor-console-mcp` executable — `.exe` on Windows), then point Claude Code at it:
+`-s user` registers it once for **every** directory on the machine. The scopes:
 
-```bash
-chmod +x godot-editor-console-mcp                                    # macOS / Linux
-claude mcp add godot-editor-console -- /abs/path/to/godot-editor-console-mcp
-```
+| Scope | Stored in | Available in |
+|---|---|---|
+| `local` (default) | `~/.claude.json`, keyed by project path | only the directory you ran it in |
+| `user` | `~/.claude.json`, global | every project on the machine |
+| `project` | `.mcp.json`, committed to the repo | anyone who clones the repo |
 
-**macOS:** a downloaded binary is unsigned, so Gatekeeper quarantines it. Clear the flag
-once (or right-click → Open the first time):
+For `project` scope, put `~/.local/bin` on your `PATH` and register the bare command
+(`-- godot-editor-console-mcp`) instead of an absolute path, so the entry isn't tied to
+your home directory.
+
+**macOS:** if you downloaded the archive **in a browser**, Gatekeeper quarantines the
+unsigned binary — clear the flag once (or right-click → Open the first time):
 
 ```bash
 xattr -d com.apple.quarantine godot-editor-console-mcp
 ```
+
+This doesn't apply to `install.sh` or a plain `curl` download; the quarantine attribute is
+set by browsers, not by curl.
 
 Then ask Claude to use the `run_console_command` tool, e.g. *"run `scene edited tree | count`"*.
 
