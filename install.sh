@@ -8,7 +8,7 @@
 #   VERSION=v0.1.0-beta      pin a release    (default: latest)
 #   --no-modify-path         never touch shell rc files
 #
-# Body below "end config" comes from sh-templates/go/install.template.sh.
+# Body below "end config" comes from sh-templates/go/templates/install.template.sh.
 # Edit the template and run ./render-installers.sh to update it.
 
 set -eu

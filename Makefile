@@ -1,18 +1,34 @@
-BINARY    := godot-editor-console-mcp
-BUILD     := build
-DIST      := dist
-VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-LDFLAGS   := -s -w -X main.version=$(VERSION)
-PLATFORMS := darwin/arm64 darwin/amd64 linux/amd64 linux/arm64 windows/amd64
+# Go release makefile. Edit this config; the shared body comes from
+# sh-templates/go/templates/makefile.template via ./render-go.sh.
+APP_NAME    = godot-editor-console-mcp
+VERSION_PKG = main
+PLATFORMS   = darwin/arm64 darwin/amd64 linux/amd64 linux/arm64 windows/amd64
+# ---- end config ----
+OUT_DIR     = build
+DIST_DIR    = dist
+VERSION     = $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS     = -ldflags "-s -w -X $(VERSION_PKG).version=$(VERSION)"
 
-.PHONY: build all clean package $(PLATFORMS)
+HOST_OS     = $(shell go env GOOS)
+HOST_ARCH   = $(shell go env GOARCH)
 
-# Host build -> build/<host-os>-<host-arch>/godot-editor-console-mcp
+.PHONY: build binary-path all test package clean $(PLATFORMS)
+
+# Host build -> build/<os>-<arch>/$(APP_NAME). Default target so the dev loop compiles one
+# target, not five.
 build:
-	go build -ldflags '$(LDFLAGS)' \
-	  -o $(BUILD)/$(shell go env GOOS)-$(shell go env GOARCH)/$(BINARY) .
+	go build $(LDFLAGS) -o $(OUT_DIR)/$(HOST_OS)-$(HOST_ARCH)/$(APP_NAME) .
 
-# Cross-compile every target in one shot
+# Report the host binary path for local tooling, including workspace installation.
+binary-path:
+	@printf '%s\n' '$(abspath $(OUT_DIR))/$(HOST_OS)-$(HOST_ARCH)/$(APP_NAME)'
+
+# Run this module's test suite. The sibling modules are separate repos consumed as tagged
+# dependencies and each has its own CI, so this covers only the module it sits in.
+test:
+	go test ./...
+
+# Cross-compile every release target.
 all: $(PLATFORMS)
 
 $(PLATFORMS):
@@ -20,33 +36,25 @@ $(PLATFORMS):
 	ext=$$( [ "$$os" = "windows" ] && echo .exe || echo ); \
 	echo "building $$os/$$arch"; \
 	GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 \
-	  go build -ldflags '$(LDFLAGS)' \
-	  -o $(BUILD)/$$os-$$arch/$(BINARY)$$ext .
+	  go build $(LDFLAGS) -o $(OUT_DIR)/$$os-$$arch/$(APP_NAME)$$ext .
 
-# Build all targets, then archive each into dist/ for a GitHub release. Keeping
-# artifacts out of build/ leaves that holding only intermediates, and lets the
-# release workflow upload a clean dist/* glob.
+# Build all targets, then archive each into dist/ for a GitHub release.
 #
-# Names are deliberately version-less so install.sh can use GitHub's
-# /releases/latest/download/<name> redirect and skip the API (no JSON parsing,
-# no unauthenticated rate limit). The release tag carries the version, and the
-# binary reports its own via `godot-editor-console-mcp version`.
-#
-# zip on every platform, matching gdaddon and repoview -- one format across all
-# three repos, so the shared installer body only ever exercises one path here.
-# Archives are flat: a single bare executable at the root, which is what the
-# installer's `[ -f "$$tmp/$$BINARY" ]` check expects.
+# Archive names are version-less on purpose: it lets install.sh use GitHub's
+# /releases/latest/download/<name> redirect and skip the API entirely. The release tag
+# carries the version. The name must match install.sh's "$BINARY-$target.$ARCHIVE_EXT",
+# so APP_NAME and BINARY have to agree. Archives are flat -- one bare executable at the root.
 package: all
-	@mkdir -p $(DIST); \
+	@mkdir -p $(DIST_DIR); \
 	for p in $(PLATFORMS); do \
 	  os=$${p%/*}; arch=$${p#*/}; \
 	  ext=$$( [ "$$os" = "windows" ] && echo .exe || echo ); \
-	  name=$(BINARY)-$$os-$$arch.zip; \
+	  name=$(APP_NAME)-$$os-$$arch.zip; \
 	  echo "packaging $$name"; \
-	  rm -f $(DIST)/$$name; \
-	  ( cd $(BUILD)/$$os-$$arch && zip -j -q ../../$(DIST)/$$name $(BINARY)$$ext ); \
+	  rm -f $(DIST_DIR)/$$name; \
+	  ( cd $(OUT_DIR)/$$os-$$arch && zip -q -j ../../$(DIST_DIR)/$$name $(APP_NAME)$$ext ); \
 	done; \
-	echo "done -> $(DIST)/"
+	echo "done -> $(DIST_DIR)/"
 
 clean:
-	rm -rf $(BUILD) $(DIST)
+	rm -rf $(OUT_DIR) $(DIST_DIR)

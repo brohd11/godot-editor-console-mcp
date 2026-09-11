@@ -119,3 +119,24 @@ Newline-delimited JSON over TCP:
 → {"id":1,"cmd":"scene edited tree | count","token":"optional"}\n
 ← {"id":1,"stdout":"...","stderr":"...","exit_code":0}\n
 ```
+
+## Shared build files
+
+Installers, the makefile body, and both GitHub workflows come from the pinned
+`sh-templates` submodule. Initialize it with `git submodule update --init sh-templates`,
+then run `./render-go.sh` to render all five files or `./render-go.sh --check` to check
+for drift and installer syntax. Edit shared templates in `sh-templates/go/templates/`; keep
+project settings above each file's `# ---- end config ----` marker.
+
+CI and `make package` do not run the renderer. Run `./render-go.sh --check` before a
+release; PowerShell syntax checking requires `pwsh` locally.
+
+For a local build, `make -s binary-path` reports the host executable path. To symlink
+it into `~/.local/bin`:
+
+```bash
+source sh-templates/go/utils/install-local.sh
+make
+binary=$(make --no-print-directory -s binary-path)
+install_local_binary "$binary"
+```
