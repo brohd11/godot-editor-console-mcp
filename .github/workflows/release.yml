@@ -16,6 +16,13 @@ jobs:
           # The Makefile stamps the version via `git describe`, which needs tags
           # and history -- the default shallow checkout would yield "dev".
           fetch-depth: 0
+          submodules: true
+
+      - name: Check installer drift and syntax
+        shell: bash
+        run: |
+          command -v pwsh
+          ./render-installers.sh --check
 
       - uses: actions/setup-go@v5
         with:

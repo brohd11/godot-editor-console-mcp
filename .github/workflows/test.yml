@@ -7,6 +7,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Check installer drift and syntax
+        shell: bash
+        run: |
+          command -v pwsh
+          ./render-installers.sh --check
 
       - uses: actions/setup-go@v5
         with:
