@@ -35,9 +35,19 @@ More install details (location, flags, etc): [shared install reference](https://
 with `xattr -dr com.apple.quarantine path/to/binary`. This doesn't apply to the installer
 above; the attribute is set by browsers, not by `curl`.
 
+## Update
+
+Check for a newer release or install it over the running binary:
+
+```sh
+godot-editor-console-mcp update --check
+godot-editor-console-mcp update
+```
 ## Use
 
-Start the bridge in the editor (once per session — it's off by default):
+Run `godot-editor-console-mcp --help` for CLI usage and environment options.
+
+Start the bridge in the editor (once per session, it's off by default):
 
 ```sh
 mcp bridge start          # listens on 127.0.0.1:9510
