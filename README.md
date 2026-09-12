@@ -1,73 +1,67 @@
 # godot-editor-console-mcp
 
-Go MCP server that drives the `Godot Editor Console` addon's command surface in the live Godot editor.
+Go MCP server for `Godot Editor Console` addon.
 
-It exposes two MCP tools that forward to a small loopback TCP listener inside the editor:
+It exposes two MCP tools that forward to a loopback TCP listener inside the editor:
 - **`run_console_command`** — run commands and return the output. 
 - **`list_commands`** — list the available commands for discovery.
 
-The Editor Console addon uses a bash-like syntax, allowing for multiline execution, pipes, conditionals. So the agent can compose the listed commands freely.
+The Editor Console addon uses a bash-like syntax ([gdsh library](https://github.com/brohd11/godot-gdsh.git)), allowing for multiline execution, pipes, conditionals. So the agent can compose the listed commands freely.
 
 
 ## How it works
 
 1. The in-editor bridge (`addons/editor_console/src/bridge/console_bridge.gd`) listens on
    `127.0.0.1:<port>` and runs each request through `EditorConsoleSingleton.run_command_capture`.
-2. This binary connects to that port — either as an MCP server (default) or a one-shot CLI.
+2. This binary connects to that port, either as an MCP server (default) or a one-shot CLI.
 
 ## Install
 
+Install to `~/.local/bin` on all platforms.
+
+Linux, Mac:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/brohd11/godot-editor-console-mcp/main/install.sh | sh
 ```
 
-Installs to `~/.local/bin`
+Windows:
+```powershell
+irm https://raw.githubusercontent.com/brohd11/godot-editor-console-mcp/main/install.ps1 | iex
+```
 
+More install details (location, flags, etc): [shared install reference](https://github.com/brohd11/goutil/blob/main/docs/install.md).
 
-Covers macOS (arm64/amd64) and Linux (amd64/arm64). On **Windows**, grab the `.zip` from the
-[Releases](https://github.com/brohd11/godot-editor-console-mcp/releases) page and unzip it.
+**macOS note:** a binary downloaded **in a browser** gets quarantined by Gatekeeper. Clear it
+with `xattr -dr com.apple.quarantine path/to/binary`. This doesn't apply to the installer
+above; the attribute is set by browsers, not by `curl`.
 
 ## Use
 
-**Start the bridge in the editor** (once per session — it's off by default):
+Start the bridge in the editor (once per session — it's off by default):
 
-```
+```sh
 mcp bridge start          # listens on 127.0.0.1:9510
 mcp bridge status
 ```
 You can also add this to your startup commands in the Editor Console.
 
-```
+``` sh
 config startup --add "mcp bridge start"
 # or with a token / custom port:
 config startup --add "mcp bridge start 9510 mytoken"
 ```
 
-**Register MCP server**:
-
-In the Editor Console:
-```
+Register MCP server in the Editor Console:
+```sh
 mcp add claude
 mcp add kimi
 ```
-
-
-```bash
+Or do it in the terminal:
+```sh
 claude mcp add -s user godot-editor-console -- ~/.local/bin/godot-editor-console-mcp
 ```
 
-
-**macOS:** if you downloaded the archive **in a browser**, Gatekeeper quarantines the
-unsigned binary — clear the flag once (or right-click → Open the first time):
-
-```bash
-xattr -d com.apple.quarantine godot-editor-console-mcp
-```
-
-This doesn't apply to `install.sh` or a plain `curl` download; the quarantine attribute is
-set by browsers, not by curl.
-
-Then ask Claude to use the `run_console_command` tool, e.g. *"run `scene edited tree | count`"*.
+Then ask Claude to use the `run_console_command` tool, e.g. `run scene edited tree | count`
 
 **Can also run via CLI** (talks to the same live editor, no headless boot):
 
@@ -76,7 +70,6 @@ Then ask Claude to use the `run_console_command` tool, e.g. *"run `scene edited 
 ```
 
 stdout goes to stdout, stderr to stderr, and the process exit code mirrors the command's.
-
 
 ## Token auth (optional)
 
@@ -99,15 +92,14 @@ Requests with a missing/wrong token get an `Unauthorized` response.
 | `EDITOR_CONSOLE_PORT` | `9510` | Bridge port (must match `mcp bridge start <port>`). |
 | `EDITOR_CONSOLE_TOKEN` | _(none)_ | Shared secret; if set, must match the token the bridge was started with. |
 
-For Claude Code, pass env in the MCP registration, e.g.:
-
+Pass env in the MCP registration:
 ```bash
 claude mcp add godot-editor-console --env EDITOR_CONSOLE_PORT=9510 -- /abs/path/to/godot-editor-console-mcp
 ```
 
 ## Security
 
-- The bridge binds **loopback only** and is **off by default** — you must run `mcp bridge start`.
+- The bridge binds loopback only and is off by default — you must run `mcp bridge start`.
 - `run_console_command` is effectively remote control of your editor. Keep it local; do not
   expose the port. Use `EDITOR_CONSOLE_TOKEN` for a basic shared-secret check.
 
@@ -115,28 +107,7 @@ claude mcp add godot-editor-console --env EDITOR_CONSOLE_PORT=9510 -- /abs/path/
 
 Newline-delimited JSON over TCP:
 
-```
+```json
 → {"id":1,"cmd":"scene edited tree | count","token":"optional"}\n
 ← {"id":1,"stdout":"...","stderr":"...","exit_code":0}\n
-```
-
-## Shared build files
-
-Installers, the makefile body, and both GitHub workflows come from the pinned
-`sh-templates` submodule. Initialize it with `git submodule update --init sh-templates`,
-then run `./render-go.sh` to render all five files or `./render-go.sh --check` to check
-for drift and installer syntax. Edit shared templates in `sh-templates/go/templates/`; keep
-project settings above each file's `# ---- end config ----` marker.
-
-CI and `make package` do not run the renderer. Run `./render-go.sh --check` before a
-release; PowerShell syntax checking requires `pwsh` locally.
-
-For a local build, `make -s binary-path` reports the host executable path. To symlink
-it into `~/.local/bin`:
-
-```bash
-source sh-templates/go/utils/install-local.sh
-make
-binary=$(make --no-print-directory -s binary-path)
-install_local_binary "$binary"
 ```
