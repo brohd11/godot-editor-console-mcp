@@ -20,6 +20,7 @@ TARGETS=(
   "Makefile"
   ".github/workflows/test.yml"
   ".github/workflows/release.yml"
+  "cliff.toml"
 )
 
 case "${1:-}" in
