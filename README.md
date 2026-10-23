@@ -1,5 +1,10 @@
 # godot-editor-console-mcp
 
+> **Deprecated.** Use [godot-shell](https://github.com/brohd11/godot-shell) instead. It gives the agent a
+> sandboxed bash shell over the editor's commands, and installs its own editor addon
+> (`godot-shell addon install`). Editor Console 0.8.0 removed the `mcp bridge` this server
+> talks to.
+
 Go MCP server for `Godot Editor Console` addon.
 
 It exposes two MCP tools that forward to a loopback TCP listener inside the editor:
